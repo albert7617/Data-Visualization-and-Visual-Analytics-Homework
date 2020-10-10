@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HW02-Parallel Coordinates chart</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha512-uto9mlQzrs59VwILcLiRYeLKPPbS/bT71da/OEBYEwcdNUk8jYIy+D176RYoop1Da+f9mvkYrmj5MCLZWEtQuA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.1.1/d3.min.js" integrity="sha512-5xkNvFVCctXwOszeifE8pzjyDFlHvHDCKIrhwmuSbCtTHqc7IhA6/1tTNYXE8WmYvwP5KFQegCS1QRR4poYgjg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha512-M5KW3ztuIICmVIhjSqXe01oV2bpe248gOxqmlcYrEzAvws7Pw3z6BK0iGbrwvdrUQUhi3eXgtxp5I8PDo9YfjQ==" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha512-MoRNloxbStBcD8z3M/2BmnT+rg4IsMxPkXaGh2zD6LGNNFE80W3onsAhRcMAMrSoyWL9xD7Ert0men7vR8LUZg==" crossorigin="anonymous" />
+  </head>
+  <style type="text/css">
+    body {
+      margin: 0px;
+      padding-bottom: 50px;
+      overflow: hidden;
+      overflow-y: auto;
+    }
+
+    .navbar-brand {
+      font-weight: 500;
+      font-size: 3rem !important;
+    }
+    .portlet-container {
+      min-height: 60px;
+    }
+    .portlet-container-desc {
+      width: 95px;
+      min-height: 60px;
+      line-height: 30px;
+      padding: .75rem .1rem;
+      text-align: center;
+    }
+    .portlet {
+      width: 95px;
+      height: 50px;
+      border-radius: .25rem;
+      padding: .75rem .1rem;
+      margin: .15rem;
+      background-color: rgba(0,0,0,.03);
+      border: 1px solid rgba(0,0,0,.125);
+      text-align: center;
+    }
+    .portlet-placeholder {
+      border: 1px dotted black;
+      border-radius: .25rem;
+      margin: .15rem;
+      width: 95px;
+      height: 50px;
+    }
+    .xAxis-label {
+      text-anchor: start;
+      font-size: 20px;
+    }
+    .tick {
+      font-size: 1.7em;
+    }
+    .connection {
+      fill: none;
+    }
+    .Iris-setosa {
+      stroke: red;
+    }
+    .Iris-versicolor {
+      stroke: green;
+    }
+    .Iris-virginica {
+      stroke: blue;
+    }
+
+    @media (min-width: 768px) {
+      .portlet-container {
+        min-height: 600px;
+      }
+    }
+
+    .legend-container {
+      cursor: pointer;
+      margin-left: 2rem;
+    }
+
+    .dot-border {
+      height: 25px;
+      width: 25px;
+      background-color: transparent;
+      border: 4px red solid;
+      display: inline-block;
+    }
+
+    .dot {
+      position: relative;
+      height: 15px;
+      width: 15px;
+      display: inline-block;
+      left: -20px;
+      top: -5px;
+    }
+    .Iris-setosa>.dot {
+      background-color: red;
+    }
+    .Iris-versicolor>.dot {
+      background-color: green;
+    }
+    .Iris-virginica>.dot {
+      background-color: blue;
+    }
+    .Iris-setosa>.dot-border {
+      border: 4px red solid;
+    }
+    .Iris-versicolor>.dot-border {
+      border: 4px green solid;
+    }
+    .Iris-virginica>.dot-border {
+      border: 4px blue solid;
+    }
+    .Iris-setosa.hidden {
+      stroke: none;
+    }
+    .Iris-versicolor.hidden {
+      stroke: none; 
+    }
+    .Iris-virginica.hidden {
+      stroke: none;
+    }
+    .dot.hidden {
+      background-color: transparent;
+    }
+
+  </style>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+      <span class="navbar-brand">HW02-Parallel Coordinates chart</span>
+    </nav>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12 col-md-2 col-xl-1" style="border-right: 1px lightgray dashed">
+          <div class="d-flex flex-row flex-md-column flex-wrap align-content-center">
+            <div class="portlet-container-desc">Shown</div>
+            <div id="axes-order" class="portlet-container d-flex flex-row flex-md-column flex-wrap align-content-center">
+              <div class="portlet" data-axis="sepal length">Sepal length</div>
+              <div class="portlet" data-axis="sepal width">Sepal width</div>
+              <div class="portlet" data-axis="petal length">Petal length</div>
+              <div class="portlet" data-axis="petal width">Petal width</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-2 col-xl-1" style="border-right: 1px lightgray dashed">
+          <div class="d-flex flex-row flex-md-column flex-wrap align-content-center">
+            <div class="portlet-container-desc">Hidden</div>
+            <div id="axes-hidden" class="portlet-container d-flex flex-row flex-md-column flex-wrap align-content-center">
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-8 col-xl-10">
+          <div class="row">
+            <div class="col-12 d-flex flex-row pt-3">
+              <span class="ml-4">Filter Visibility:</span>
+              <div class="legend-container d-flex flex-row" data-species="Iris-setosa">
+                <div class="dot-container Iris-setosa"><span class="dot-border"></span><span class="dot"></span></div>
+                <span class="legend">Iris-setosa</span>
+              </div>
+              <div class="legend-container d-flex flex-row" data-species="Iris-versicolor">
+                <div class="dot-container Iris-versicolor"><span class="dot-border"></span><span class="dot"></span></div>
+                <span class="legend">Iris-versicolor</span>
+              </div>
+              <div class="legend-container d-flex flex-row" data-species="Iris-virginica">
+                <div class="dot-container Iris-virginica"><span class="dot-border"></span><span class="dot"></span></div>
+                <span class="legend">Iris-virginica</span>
+              </div>
+            </div>
+            <div id="chart" class="col-12"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- <script src="script.js"></script> -->
+    <script>
+      var data;
+      
+      $(document).ready(function() {
+        const render = (data, axes) => {
+          // set the dimensions and margins of the graph
+          const margin = {top: 10, right: 40, bottom: 10, left: 30};
+          const width = parseInt(d3.select("#chart").style("width"), 10);
+          const height = 660;
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          // append the svg object to the body of the page
+          d3.select("#chart svg").remove();
+          const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+          // Append margin
+          const graphContainer = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+          // For each dimension, I build a linear scale. I store all in a y object
+          const xAxes = {};
+          for (obj in axes) {
+            name = axes[obj];
+            xAxes[name] = d3.scaleLinear()
+              .domain( d3.extent(data, (d) => d[name]) )
+              .range([0, innerWidth]);
+          }
+
+          // Build the X scale -> it find the best position for each Y axis
+          const yAxes = d3.scalePoint()
+            .range([20, innerHeight])
+            .padding(0.3)
+            .domain(axes);
+
+          // The connection function take a row of the csv as input, 
+          // and return x and y coordinates of the line to draw for this raw.
+
+          const connection = d => d3.line()(axes.map(pt => [xAxes[pt](d[pt]), yAxes(pt)]));
+
+          // Draw the connections
+          graphContainer.selectAll('connections')
+            .data(data)
+            .enter().append('path')
+            .attr('d',  connection)
+            .attr('class', d => d.class)
+            .attr('class', d => 'connection '+d.class);
+
+          // Draw the axes:
+          graphContainer.selectAll("axes")
+            // For each dimension of the dataset I add a 'g' element:
+            .data(axes).enter()
+            .append("g")
+            // I translate this element to its right position on the x axis
+            .attr("transform", function(d) { return "translate( 0, " + yAxes(d) + ")"; })
+            // And I build the axis with the call function
+            .each(function(d) { d3.select(this).call(d3.axisBottom().scale(xAxes[d])); })
+            // Add axis title
+            .append("text")
+              .attr('class', 'xAxis-label')
+              .attr("y", -9)
+              .text(d => d)
+              .style("fill", "black");
+        }
+
+        d3.csv('https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/iris.csv').then(csv => {
+          for (var i = csv.length - 1; i >= 0; i--) {
+            if(csv[i].class === "") {
+              csv.splice(i, 1);
+            }
+          }
+          let axes = Object.keys(csv[0]).filter(d => d!="class");
+          // Call render function
+          render(csv, axes);
+          data = csv
+        });
+
+        $( ".portlet-container" ).sortable({ 
+          connectWith: ".portlet-container",
+          placeholder: "portlet-placeholder",
+          update: function(event, ui) {
+            if(event.target.id == 'axes-order') {
+              let axes = [];
+              $('#axes-order').children('.portlet').each((idx, elem) => {
+                axes.push($(elem).data('axis'));
+              });
+              render(data, axes);
+              $('.legend-container .dot').each((idx, elem) => {
+                if($(elem).hasClass('hidden')) {
+                  $('#chart svg').find('.'+$(elem).parent().parent().data('species')).toggleClass('hidden');
+                }
+              });
+            }
+          },
+        });
+        $(".legend-container").on('click', function(event) {
+          $(this).find('.dot').toggleClass('hidden');
+          $('#chart svg').find('.'+$(this).data('species')).toggleClass('hidden');
+        });
+      })
+      
+    </script> 
+  </body>
+</html>
