@@ -277,7 +277,17 @@
           $(this).find('.dot').toggleClass('hidden');
           $('#chart svg').find('.'+$(this).data('species')).toggleClass('hidden');
         });
-        window.addEventListener('resize', () => { render(data, dataName[$('input[name="x-axis"]:checked').val()], dataName[$('input[name="y-axis"]:checked').val()]) });
+        window.addEventListener('resize', () => { 
+          $('#axes-order').children('.portlet').each((idx, elem) => {
+            axes.push($(elem).data('axis'));
+          });
+          render(data, axes);
+          $('.legend-container .dot').each((idx, elem) => {
+            if($(elem).hasClass('hidden')) {
+              $('#chart svg').find('.'+$(elem).parent().parent().data('species')).toggleClass('hidden');
+            }
+          });
+        });
       })
       
     </script> 
