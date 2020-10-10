@@ -278,6 +278,7 @@
           $('#chart svg').find('.'+$(this).data('species')).toggleClass('hidden');
         });
         window.addEventListener('resize', () => { 
+          let axes = [];
           $('#axes-order').children('.portlet').each((idx, elem) => {
             axes.push($(elem).data('axis'));
           });
