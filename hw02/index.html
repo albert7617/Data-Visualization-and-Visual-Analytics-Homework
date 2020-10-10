@@ -277,6 +277,7 @@
           $(this).find('.dot').toggleClass('hidden');
           $('#chart svg').find('.'+$(this).data('species')).toggleClass('hidden');
         });
+        window.addEventListener('resize', () => { render(data, dataName[$('input[name="x-axis"]:checked').val()], dataName[$('input[name="y-axis"]:checked').val()]) });
       })
       
     </script> 
