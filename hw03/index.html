@@ -15,121 +15,17 @@
     body {
       margin: 0px;
       padding-bottom: 50px;
-      overflow: hidden;
-      overflow-y: auto;
+      overflow: scroll;
     }
-
     .navbar-brand {
       font-weight: 500;
       font-size: 3rem !important;
     }
-    .portlet-container {
-      min-height: 60px;
-    }
-    .portlet-container-desc {
-      width: 95px;
-      min-height: 60px;
-      line-height: 30px;
-      padding: .75rem .1rem;
-      text-align: center;
-    }
-    .portlet {
-      width: 95px;
-      height: 50px;
-      border-radius: .25rem;
-      padding: .75rem .1rem;
-      margin: .15rem;
-      background-color: rgba(0,0,0,.03);
-      border: 1px solid rgba(0,0,0,.125);
-      text-align: center;
-    }
-    .portlet-placeholder {
-      border: 1px dotted black;
-      border-radius: .25rem;
-      margin: .15rem;
-      width: 95px;
-      height: 50px;
-    }
-    .xAxis-label {
-      text-anchor: start;
-      font-size: 20px;
-    }
-    .tick {
-      font-size: 1.7em;
-    }
-    .connection {
-      fill: none;
-    }
-    .Iris-setosa {
-      stroke: red;
-    }
-    .Iris-versicolor {
-      stroke: green;
-    }
-    .Iris-virginica {
-      stroke: blue;
-    }
-
-    @media (min-width: 768px) {
-      .portlet-container {
-        min-height: 600px;
-      }
-    }
-
-    .legend-container {
-      cursor: pointer;
-      margin-left: 2rem;
-    }
-
-    .dot-border {
-      height: 25px;
-      width: 25px;
-      background-color: transparent;
-      border: 4px red solid;
-      display: inline-block;
-    }
-
-    .dot {
-      position: relative;
-      height: 15px;
-      width: 15px;
-      display: inline-block;
-      left: -20px;
-      top: -5px;
-    }
-    .Iris-setosa>.dot {
-      background-color: red;
-    }
-    .Iris-versicolor>.dot {
-      background-color: green;
-    }
-    .Iris-virginica>.dot {
-      background-color: blue;
-    }
-    .Iris-setosa>.dot-border {
-      border: 4px red solid;
-    }
-    .Iris-versicolor>.dot-border {
-      border: 4px green solid;
-    }
-    .Iris-virginica>.dot-border {
-      border: 4px blue solid;
-    }
-    .Iris-setosa.hidden {
-      stroke: none;
-    }
-    .Iris-versicolor.hidden {
-      stroke: none; 
-    }
-    .Iris-virginica.hidden {
-      stroke: none;
-    }
-    .dot.hidden {
-      background-color: transparent;
-    }
     .chart-container {
       overflow: hidden; 
       height: 800px;
+      border: solid 1px #cdcdcd;
+      cursor: grab;
     }
     .hightlight-node {
       stroke: blue;
@@ -154,15 +50,16 @@
     </div>
     <script>
       var data;
+      var focusNode = undefined;
       const totalNodeCount = 410;
 
       $(document).ready(function() {
 
         const forceDirectedRender = (links, nodes) => {
           const margin = { top: 40, right: 40, bottom: 40, left: 40 },
-                height = 800;
-                // width = 500;
-          const width = parseInt(d3.select("#force-chart").style("width"), 10);
+                height = 1000;
+                width = 1000;
+          // const width = parseInt(d3.select("#force-chart").style("width"), 10);
           const innerWidth = width - margin.left - margin.right;
           const innerHeight = height - margin.top - margin.bottom;
 
@@ -229,34 +126,38 @@
             .selectAll("circle")
             .data(nodes)
             .join("circle")
-            .attr('class', 'node')
+            .attr('class', d => `node node-${d.id}`)
             .attr('data-target', d => `.link-${d.id}`)
             .attr("r", 5)
             .attr("fill", d => nodeColor(d.degree))
-            .on('mouseover', function(e, d) {
-              d3.select(this).attr('stroke', 'blue');;
-              d3.selectAll(`.link-${d.id}`).attr('stroke', 'blue');
-            })
+            .on('mouseover', (e, d) => hightlight(d.id))
             .on('mouseout', function(e, d) {
-              d3.select(this).attr('stroke', '#999');;
-              d3.selectAll(`.link-${d.id}`).attr('stroke', '#999');
+              if(d.id != focusNode) {
+                unhightlight(d.id)
+              }
+            })
+            .on('click', function(e, d) {
+              if(focusNode != undefined) {
+                unhightlight(focusNode);
+              }
+              if(focusNode == d.id) {
+                focusNode = undefined;
+                return;
+              }
+              focusNode = d.id;
+              hightlight(focusNode)
             })
             .call(drag(simulation));
 
           simulation.on("tick", () => {
-            link
-                .attr("x1", d => d.source.x)
+            link.attr("x1", d => d.source.x)
                 .attr("y1", d => d.source.y)
                 .attr("x2", d => d.target.x)
                 .attr("y2", d => d.target.y);
 
-            node
-                .attr("cx", d => d.x)
+            node.attr("cx", d => d.x)
                 .attr("cy", d => d.y);
           });
-
-          // invalidation.then(() => simulation.stop());
-
           return svg.node();
         }
 
@@ -264,7 +165,6 @@
           const margin = { top: 40, right: 40, bottom: 40, left: 40 },
                 height = 5000,
                 width = 5000;
-          // const width = parseInt(d3.select("#matrix-chart").style("width"), 10);
           const innerWidth = width - margin.left - margin.right;
           const innerHeight = height - margin.top - margin.bottom;
 
@@ -287,39 +187,6 @@
             .domain([0, nodes])
             .range([0, innerWidth]);
 
-          const xScale = d3.scaleLinear()
-            .domain([0, nodes])
-            .range([0, innerWidth]);
-
-          const yScale = d3.scaleLinear()
-            .domain([0, nodes])
-            .range([0, innerHeight]);
-
-          graphContainer.selectAll('.row')
-            .data(links).enter().append('g')
-            .attr('transform', (d, idx) => `translate(0, ${scale(idx)})`)
-            .each(function(d, idx) {
-              // Append horizontal line
-              d3.select(this).append('line').attr('x2', innerWidth).attr('stroke', 'black');
-              // Append horizontal node index
-              d3.select(this).append('text')
-                .attr('style', 'font-size: 12px;')
-                .attr('transform', 'translate(-5, 10)')
-                .attr('text-anchor', 'end')
-                .text(idx+1);
-              // Append square to represent links
-              d3.select(this).selectAll('square').data(d)
-                .enter().append('rect')
-                .attr('transform', d => `translate(${scale(d)}, 0)`)
-                .attr('width', 12)
-                .attr('height', 12);
-            });
-
-          // Append last horizontal line
-          graphContainer.append('g')
-            .attr('transform', `translate(0, ${scale(nodes)})`)
-            .append('line').attr('x2', innerWidth).attr('stroke', 'black');
-
           graphContainer.selectAll('.column')
             .data(links).enter().append('g')
             .attr('transform', (d, idx) => `translate(${scale(idx)}, 0) rotate(-90)`)
@@ -337,6 +204,62 @@
           graphContainer.append('g')
             .attr('transform', `translate(${scale(nodes)}, 0) rotate(-90)`)
             .append('line').attr('x2', -innerWidth).attr('stroke', 'black');
+
+          graphContainer.selectAll('.row')
+            .data(links).enter().append('g')
+            .attr('transform', (d, idx) => `translate(0, ${scale(idx)})`)
+            .each(function(d, idx) {
+              // Append horizontal line
+              d3.select(this).append('line').attr('x2', innerWidth).attr('stroke', 'black');
+              // Append horizontal node index
+              d3.select(this).append('text')
+                .attr('style', 'font-size: 12px;')
+                .attr('transform', 'translate(-5, 10)')
+                .attr('text-anchor', 'end')
+                .text(idx+1);
+              // Append square to represent links
+              d3.select(this).selectAll('square').data(d)
+                .enter().append('rect')
+                .attr('transform', d => `translate(${scale(d)}, 0)`)
+                .attr('data-x', d => scale(d))
+                .attr('data-t', d => d+1)
+                .attr('data-s', idx+1)
+                .attr('width', 12)
+                .attr('height', 12)
+                .attr('class', d => `square square-${idx+1} square-${d+1}`)
+                .on('mouseover', (e, d) => {
+                  var legendBox = d3.select(this).append('g')
+                    .attr('class', 'matrix-tooltip')
+                    .attr('transform', d => `translate(${e.target.dataset.x-10}, -5)`);
+                  legendBox.append('rect')
+                    .attr('width', 64)
+                    .attr('height', 24)
+                    .attr('transform', d => `translate(-5, -17)`)
+                    .attr('fill', 'blue');
+                  legendBox.append('text')
+                    .attr('stroke', 'white')
+                    .attr('fill', 'white')
+                    .text(`${e.target.dataset.t}-${e.target.dataset.s}`);
+                  d3.select(`#force-chart .link-${e.target.dataset.t}.link-${e.target.dataset.s}`).attr('stroke', 'green');
+                  d3.select(`#force-chart .link-${e.target.dataset.t}.link-${e.target.dataset.s}`).attr('stroke-width', '20');
+                })
+                .on('mouseout', (e, d) => {
+                  d3.select('#matrix-chart .matrix-tooltip').remove();
+                  d3.select(`#force-chart .link-${e.target.dataset.t}.link-${e.target.dataset.s}`).attr('stroke', '#999');
+                  d3.select(`#force-chart .link-${e.target.dataset.t}.link-${e.target.dataset.s}`).attr('stroke-width', '1');
+                });
+            });
+
+          // Append last horizontal line
+          graphContainer.append('g')
+            .attr('transform', `translate(0, ${scale(nodes)})`)
+            .append('line').attr('x2', innerWidth).attr('stroke', 'black');
+
+          
+
+          const legendContainer = graphContainer.append('g')
+            .attr('transform', `translate(-10,-30)`);
+          legendContainer.append('text').text('Drag to pan, scroll to zoom');
         }
         jQuery.getJSON('https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw03/infect-dublin.json', function(json, textStatus) {
           var matrix = new Array(totalNodeCount);
@@ -364,54 +287,21 @@
           matrixRender(matrix, totalNodeCount);
           forceDirectedRender(links, nodes);
         });
+      });
+    function hightlight(id) {
+      d3.select(`#force-chart .node-${id}`).attr('stroke', 'blue');;
+      d3.selectAll(`#force-chart .link-${id}`).attr('stroke', 'blue');
+      d3.selectAll(`#matrix-chart .square-${id}`).attr('fill', 'blue');
+    }
 
-        $( ".portlet-container" ).sortable({ 
-          connectWith: ".portlet-container",
-          placeholder: "portlet-placeholder",
-          update: function(event, ui) {
-            if(event.target.id == 'axes-order') {
-              let axes = [];
-              $('#axes-order').children('.portlet').each((idx, elem) => {
-                axes.push($(elem).data('axis'));
-              });
-              render(data, axes);
-              $('.legend-container .dot').each((idx, elem) => {
-                if($(elem).hasClass('hidden')) {
-                  $('#chart svg').find('.'+$(elem).parent().parent().data('species')).toggleClass('hidden');
-                }
-              });
-            }
-          },
-        });
-        $(".legend-container").on('click', function(event) {
-          $(this).find('.dot').toggleClass('hidden');
-          $('#chart svg').find('.'+$(this).data('species')).toggleClass('hidden');
-        });
-        window.addEventListener('resize', () => { 
-          let axes = [];
-          $('#axes-order').children('.portlet').each((idx, elem) => {
-            axes.push($(elem).data('axis'));
-          });
-          render(data, axes);
-          $('.legend-container .dot').each((idx, elem) => {
-            if($(elem).hasClass('hidden')) {
-              $('#chart svg').find('.'+$(elem).parent().parent().data('species')).toggleClass('hidden');
-            }
-          });
-        });
+    function unhightlight(id) {
+      d3.select(`#force-chart .node-${id}`).attr('stroke', '#999');;
+      d3.selectAll(`#force-chart .link-${id}`).attr('stroke', '#999');
+      d3.selectAll(`#matrix-chart .square-${id}`).attr('fill', 'black');
+    }
 
-        $('.node').mouseenter(e => {
-          console.log(this);
-          $(this).toggleClass('highlight-node');
-          $(this.dataset.target).toggleClass('highlight-link');
-        });
-
-        $('.node').mouseleave(e => {
-          $(this).toggleClass('highlight-node');
-          $(this.dataset.target).toggleClass('highlight-link');
-        });
-      })
       
     </script> 
+    }
   </body>
 </html>
