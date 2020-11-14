@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>HW03-Node link diagrams vs. adjacency matrix</title>
+    <title>HW04-Optimal Order of Adjacency Matrix Visualization</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
@@ -35,7 +35,7 @@
   </style>
   <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <span class="navbar-brand">HW03-Node link diagrams vs. adjacency matrix</span>
+      <span class="navbar-brand">HW04-Optimal Order of Adjacency Matrix Visualization</span>
     </nav>
     <div class="container-fluid mb-1">
       <div class="row">
@@ -43,12 +43,11 @@
           <h4>Scroll to zoom, drag to pan, hover or click for detail info.</h4>
         </div>
         <div class="col-12 col-md-6">
-          <h5>Hover(click to focus) to highlight nodes on the right.</h5>
-          <div class="chart-container" id="force-chart"></div>
-        </div>
-        <div class="col-12 col-md-6">
           <h5>Hover to highlight link on the left.</h5>
           <div class="chart-container" id="matrix-chart"></div>
+        </div>
+        <div class="col-12 col-md-6">
+
         </div>
       </div>
     </div>
@@ -58,126 +57,6 @@
       const totalNodeCount = 410;
 
       $(document).ready(function() {
-
-        const forceDirectedRender = (links, nodes) => {
-          const margin = { top: 40, right: 40, bottom: 40, left: 40 },
-                height = 1000;
-                width = 1000;
-          // const width = parseInt(d3.select("#force-chart").style("width"), 10);
-          const innerWidth = width - margin.left - margin.right;
-          const innerHeight = height - margin.top - margin.bottom;
-
-          // append the svg object to the body of the page
-          d3.select("#force-chart svg").remove();
-          const svg = d3.select("#force-chart")
-            .append("svg")
-            .call(d3.zoom().on("zoom", (e) => {
-              // Handle zooming and panning
-              graphContainer.attr('transform', `translate(${e.transform.x}, ${e.transform.y}) scale(${e.transform.k})`);
-            }))
-            .attr("width", width)
-            .attr("height", height);
-
-          // Append margin
-          const graphContainer = svg.append('g')
-            .attr('transform', `translate(${margin.left},${margin.top})`);
-          const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id(d => d.id))
-            .force("charge", d3.forceManyBody())
-            .force("center", d3.forceCenter(width / 2, height / 2));
-
-          const link = graphContainer.append("g")
-            .attr("stroke", "#999")
-            .attr("stroke-opacity", 0.6)
-            .selectAll("line")
-            .data(links)
-            .join("line")
-            .attr('class', d => `link link-${d.target.id} link-${d.source.id}`)
-            .attr("stroke-width", '1');
-
-          const nodeColor = d3.scaleLinear().domain([1, 50]).range(["pink", "red"]);
-
-
-          const drag = simulation => {
-            
-            function dragstarted(event) {
-              if (!event.active) simulation.alphaTarget(0.3).restart();
-              event.subject.fx = event.subject.x;
-              event.subject.fy = event.subject.y;
-            }
-            
-            function dragged(event) {
-              event.subject.fx = event.x;
-              event.subject.fy = event.y;
-            }
-            
-            function dragended(event) {
-              if (!event.active) simulation.alphaTarget(0);
-              event.subject.fx = null;
-              event.subject.fy = null;
-            }
-            
-            return d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended);
-          }
-
-          const node = graphContainer.append("g")
-            .attr("stroke", "#999")
-            .attr("stroke-width", 1.5)
-            .selectAll("circle")
-            .data(nodes)
-            .join("circle")
-            .attr('class', d => `node node-${d.id}`)
-            .attr('data-target', d => `.link-${d.id}`)
-            .attr("r", 5)
-            .attr("fill", d => nodeColor(d.degree))
-            .on('mouseover', (e, d) => {
-              hightlight(d.id);
-              var legendBox = graphContainer.append('g')
-                .attr('class', 'force-tooltip')
-                .attr('transform', d => `translate(${e.target.getAttribute('cx')}, ${e.target.getAttribute('cy')-20})`);
-              legendBox.append('rect')
-                .attr('width', 84)
-                .attr('height', 24)
-                .attr('transform', d => `translate(-5, -17)`)
-                .attr('fill', 'blue');
-              legendBox.append('text')
-                .attr('stroke', 'white')
-                .attr('fill', 'white')
-                .text(`Node: ${d.id+1}`);
-            })
-            .on('mouseout', function(e, d) {
-              d3.select('#force-chart .force-tooltip').remove();
-              if(d.id != focusNode) {
-                unhightlight(d.id)
-              }
-            })
-            .on('click', function(e, d) {
-              if(focusNode != undefined) {
-                unhightlight(focusNode);
-              }
-              if(focusNode == d.id) {
-                focusNode = undefined;
-                return;
-              }
-              focusNode = d.id;
-              hightlight(focusNode)
-            })
-            .call(drag(simulation));
-
-          simulation.on("tick", () => {
-            link.attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            node.attr("cx", d => d.x)
-                .attr("cy", d => d.y);
-          });
-          return svg.node();
-        }
 
         const matrixRender = (links, nodes) => {
           const margin = { top: 40, right: 40, bottom: 40, left: 40 },
@@ -286,7 +165,7 @@
           for (var i = 0; i < json.length; i++) {
             var a = json[i].source - 1;
             var b = json[i].target - 1;
-            links.push({source:a, target:b});
+            links.push({source:a, target:b, value:1});
             if(matrix[a] == undefined) {
               matrix[a] = new Array();
             }
@@ -298,13 +177,12 @@
           }
           var nodes = matrix.map((val, idx)=>{
             return {
-              id: idx,
+              name: idx,
               group: Math.ceil(val.length/10),
               degree: val.length
             }
           });
           matrixRender(matrix, totalNodeCount);
-          forceDirectedRender(links, nodes);
         });
       });
     function hightlight(id) {
