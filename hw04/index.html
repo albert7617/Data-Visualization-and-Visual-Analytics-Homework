@@ -7,11 +7,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha512-uto9mlQzrs59VwILcLiRYeLKPPbS/bT71da/OEBYEwcdNUk8jYIy+D176RYoop1Da+f9mvkYrmj5MCLZWEtQuA==" crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
-    <script src="https://d3js.org/d3-force.v2.min.js"></script>
-    <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/reorder.v1.min.js"></script>
     <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/science.v1.min.js"></script>
     <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/tiny-queue.js"></script>
-    <script src="https://d3js.org/d3-force.v2.min.js"></script>
+    <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/reorder.v1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha512-M5KW3ztuIICmVIhjSqXe01oV2bpe248gOxqmlcYrEzAvws7Pw3z6BK0iGbrwvdrUQUhi3eXgtxp5I8PDo9YfjQ==" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha512-MoRNloxbStBcD8z3M/2BmnT+rg4IsMxPkXaGh2zD6LGNNFE80W3onsAhRcMAMrSoyWL9xD7Ert0men7vR8LUZg==" crossorigin="anonymous" />
   </head>
@@ -44,14 +42,8 @@
     <div class="container-fluid mb-1">
       <div class="row">
         <div class="col-12">
-          <h4>Scroll to zoom, drag to pan, hover or click for detail info.</h4>
-        </div>
-        <div class="col-12 col-md-6">
-          <h5>Hover to highlight link on the left.</h5>
+          <button id="optimal-leaf-order" type="button" class="btn btn-primary btn-lg btn-block mb-2" disabled="">Optimal Leaf Order (Calculating, Please wait...)</button>
           <div class="chart-container" id="matrix-chart"></div>
-        </div>
-        <div class="col-12 col-md-6">
-
         </div>
       </div>
     </div>
@@ -59,17 +51,31 @@
       var data;
       var focusNode = undefined;
       const totalNodeCount = 410;
+      var order, optimalLeafOrder;
+      const webWorker = new Worker('script.js');  
 
       $(document).ready(function() {
 
-        const matrixRender = (links, nodes) => {
+        const render = (links, nodes, squares) => {
+          var matrix = [];
           const margin = { top: 40, right: 40, bottom: 40, left: 40 },
                 height = 5000,
                 width = 5000;
           const innerWidth = width - margin.left - margin.right;
           const innerHeight = height - margin.top - margin.bottom;
+          nodes.forEach(function(node, i) {
+            matrix[i] = d3.range(nodes.length).map(function(j) { return { x: j, y: i, z: 0 }; });
+          });
+          // Convert links to matrix; count character occurrences.
+          links.forEach(function(link) {
+            matrix[link.source][link.target].z += link.value;
+            matrix[link.target][link.source].z += link.value;
+            matrix[link.source][link.source].z += link.value;
+            matrix[link.target][link.target].z += link.value;
+          });
 
-          // append the svg object to the body of the page
+          const adjacency = matrix.map(row => row.map(elem => elem.z));
+
           d3.select("#matrix-chart svg").remove();
           const svg = d3.select("#matrix-chart")
             .append("svg")
@@ -84,12 +90,14 @@
           const graphContainer = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
 
-          const scale = d3.scaleLinear()
-            .domain([0, nodes])
+          const scale = d3.scaleBand()
+            .round(true)
+            .domain(nodes.map(elem => elem.name))
             .range([0, innerWidth]);
-
+          
           graphContainer.selectAll('.column')
-            .data(links).enter().append('g')
+            .data(squares).enter().append('g')
+            .attr('class', 'column')
             .attr('transform', (d, idx) => `translate(${scale(idx)}, 0) rotate(-90)`)
             .each(function(d, idx) {
               // Append vertical line
@@ -102,11 +110,12 @@
             });
           // Append last vertical line
           graphContainer.append('g')
-            .attr('transform', `translate(${scale(nodes)}, 0) rotate(-90)`)
+            .attr('transform', `translate(${innerWidth}, 0) rotate(-90)`)
             .append('line').attr('x2', -innerWidth).attr('stroke', 'black');
 
           graphContainer.selectAll('.row')
-            .data(links).enter().append('g')
+            .data(squares).enter().append('g')
+            .attr('class', 'row')
             .attr('transform', (d, idx) => `translate(0, ${scale(idx)})`)
             .each(function(d, idx) {
               // Append horizontal line
@@ -153,16 +162,32 @@
                   }
                 });
             });
-
           // Append last horizontal line
           graphContainer.append('g')
-            .attr('transform', `translate(0, ${scale(nodes)})`)
+            .attr('transform', `translate(0, ${innerWidth})`)
             .append('line').attr('x2', innerWidth).attr('stroke', 'black');
 
           const legendContainer = graphContainer.append('g')
             .attr('transform', `translate(-10,-30)`);
           legendContainer.append('text').text('Drag to pan, scroll to zoom');
+
+          return [adjacency ,(optimalLeafOrder) => {
+            scale.domain(optimalLeafOrder);
+            const transit = graphContainer.transition().duration(5000);
+            transit.selectAll(".row")
+              .delay((d, i) => scale(i))
+              .attr("transform", (d, i) => "translate(0," + scale(i) + ")")
+              .selectAll(".square")
+              .delay(d => scale(d))
+              .attr("transform", d => "translate(" + scale(d) + ", 0)")
+
+            transit.selectAll(".column")
+              .delay((d, i) => scale(i))
+              .attr("transform", (d, i) => "translate(" + scale(i) + ")rotate(-90)");
+          }]
+          
         }
+
         jQuery.getJSON('https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw03/infect-dublin.json', function(json, textStatus) {
           var matrix = new Array(totalNodeCount);
           var links = new Array();
@@ -186,24 +211,21 @@
               degree: val.length
             }
           });
-          matrixRender(matrix, totalNodeCount);
+          // matrixRender(matrix, totalNodeCount);
+          var retval = render(links, nodes, matrix);
+          adjacencyMatrix = retval[0];
+          order = retval[1];
+          webWorker.postMessage(adjacencyMatrix);
         });
+        $('#optimal-leaf-order').on('click', function(event) {
+          order(optimalLeafOrder);
+        });
+        webWorker.onmessage = function(e) {
+          optimalLeafOrder = e.data;
+          $('#optimal-leaf-order').text('Optimal Leaf Order').prop('disabled', false);;
+        }
       });
-    function hightlight(id) {
-      d3.select(`#force-chart .node-${id}`).attr('stroke', 'blue');;
-      d3.selectAll(`#force-chart .link-${id}`).attr('stroke', 'blue');
-      d3.selectAll(`#matrix-chart .square:not(.square-${id})`).attr('fill', 'none');
-      d3.selectAll(`#matrix-chart .square.square-${id}`).attr('fill', 'red');
-    }
-
-    function unhightlight(id) {
-      d3.select(`#force-chart .node-${id}`).attr('stroke', '#999');;
-      d3.selectAll(`#force-chart .link-${id}`).attr('stroke', '#999');
-      d3.selectAll(`#matrix-chart .square.square-${id}`).attr('fill', 'black');
-      d3.selectAll(`#matrix-chart .square:not(.square-${id})`).attr('fill', 'black');
-    }
-
-      
+         
     </script> 
   </body>
 </html>
