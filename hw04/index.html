@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha512-uto9mlQzrs59VwILcLiRYeLKPPbS/bT71da/OEBYEwcdNUk8jYIy+D176RYoop1Da+f9mvkYrmj5MCLZWEtQuA==" crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/science.v1.min.js"></script>
-    <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/tiny-queue.js"></script>
     <script src="https://albert7617.github.io/Data-Visualization-and-Visual-Analytics-Homework/hw04/lib/reorder.v1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha512-M5KW3ztuIICmVIhjSqXe01oV2bpe248gOxqmlcYrEzAvws7Pw3z6BK0iGbrwvdrUQUhi3eXgtxp5I8PDo9YfjQ==" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha512-MoRNloxbStBcD8z3M/2BmnT+rg4IsMxPkXaGh2zD6LGNNFE80W3onsAhRcMAMrSoyWL9xD7Ert0men7vR8LUZg==" crossorigin="anonymous" />
@@ -53,7 +52,13 @@
       const totalNodeCount = 410;
       var order, optimalLeafOrder;
       const webWorker = new Worker('script.js');  
-
+      function intersect(a, b) {
+        var t;
+        if (b.length > a.length) t = b, b = a, a = t; // indexOf to loop over shorter
+        return a.filter(function (e) {
+          return b.indexOf(e) > -1;
+        }).length;
+      }
       $(document).ready(function() {
 
         const render = (links, nodes, squares) => {
@@ -73,8 +78,15 @@
             matrix[link.source][link.source].z += link.value;
             matrix[link.target][link.target].z += link.value;
           });
-
-          const adjacency = matrix.map(row => row.map(elem => elem.z));
+          var adjacency = [];
+          for (var i = 0; i < squares.length; i++) {
+            adjacency.push([]);
+            var nodeLinkCount = squares[i].length;
+            for (var j = 0; j < squares.length; j++) {
+              adjacency[i][j] = intersect(squares[i], squares[j])/nodeLinkCount;
+            }
+          }
+          // const adjacency = matrix.map(row => row.map(elem => elem.z));
 
           d3.select("#matrix-chart svg").remove();
           const svg = d3.select("#matrix-chart")
