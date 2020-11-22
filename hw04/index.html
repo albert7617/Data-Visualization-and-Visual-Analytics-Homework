@@ -83,7 +83,8 @@
             adjacency.push([]);
             var nodeLinkCount = squares[i].length;
             for (var j = 0; j < squares.length; j++) {
-              adjacency[i][j] = intersect(squares[i], squares[j])/nodeLinkCount;
+              // adjacency[i][j] = intersect(squares[i], squares[j])/nodeLinkCount;
+              adjacency[i][j] = intersect(squares[i], squares[j]);
             }
           }
           // const adjacency = matrix.map(row => row.map(elem => elem.z));
