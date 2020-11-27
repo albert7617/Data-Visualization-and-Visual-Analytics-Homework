@@ -70,7 +70,13 @@
           // append the svg object to the body of the page
           d3.select("#force-chart svg").remove();
           const svg = d3.select("#force-chart")
-            .append("svg")
+            .append("svg1")
+            
+
+
+
+
+
             .call(d3.zoom().on("zoom", (e) => {
               // Handle zooming and panning
               graphContainer.attr('transform', `translate(${e.transform.x}, ${e.transform.y}) scale(${e.transform.k})`);
@@ -80,6 +86,7 @@
 
           // Append margin
           const graphContainer = svg.append('g')
+          // const graphContainer = d3.select("#force-chart svg").append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
           const simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links).id(d => d.id))
@@ -303,6 +310,7 @@
               degree: val.length
             }
           });
+          console.log(matrix);
           matrixRender(matrix, totalNodeCount);
           forceDirectedRender(links, nodes);
         });

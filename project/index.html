@@ -3,9 +3,19 @@
 <head>
   <title>Map</title>
   <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.min.css" integrity="sha512-oc9+XSs1H243/FRN9Rw62Fn8EtxjEYWHXRvjS43YtueEewbS6ObfXcJNyohjHqVKFPoXXUxwc+q1K7Dee6vv9g==" crossorigin="anonymous" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/jquery.kinetic/jquery.kinetic.js"></script>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script type="text/javascript" src="https://unpkg.com/topojson@3"></script>
   <style type="text/css">
+    .map-container {
+      width: 850px;
+      overflow-x: hidden;
+    }
+    .dialing-container {
+      position: relative;
+    }
     .date-container {
       width: 140px;
       height: 500px;
@@ -44,7 +54,7 @@
       display: flex;
       flex-direction: column;
       position: absolute;
-      top: 248px;
+      top: 185px;
     }
     .red-bar {
       height: 1px;
@@ -56,18 +66,27 @@
       border-top: solid red 1px;
       width: 140px; 
     }
+    .color {
+      background: rgb(15,114,135);
+      background: linear-gradient(90deg, rgba(15,114,135,1) 0%, rgba(94,228,138,1) 19%, rgba(243,243,194,1) 55%, rgba(117,2,5,1) 100%); 
+    }
   </style>
 </head>
 <body>
-  <h1></h1>
-  <div class="date-container" id="date-container">
-    <div class="red-bar-container" id="red-bar">
-      <div class="red-bar-secondary"></div>
-      <div class="red-bar"></div>
-      <div class="red-bar-secondary"></div>
+  <div class="container-fluid d-flex flex-row">
+    <div class="map-container" id="map-temp"></div>
+    <div class="dialing-container">
+      <div class="red-bar-container" id="red-bar">
+        <div class="red-bar-secondary"></div>
+        <div class="red-bar"></div>
+        <div class="red-bar-secondary"></div>
+      </div>
+      <div class="date-container" id="date-container">
+      </div>
     </div>
+    <div class="map-container" id="map-rain"></div>
   </div>
-  <br><br>
+  <h1></h1>
   <button id="resume" style="display: none;">Resume auto scroll</button>
 </body>
 <script type="text/javascript">
@@ -79,6 +98,21 @@
     var dateMove = new Date(startDate);
     var strDate = startDate;
     var i = 0;
+
+    const entries = {};
+    const precipitationColorDomain = [1, 2, 6, 10, 15, 20, 30, 40, 50, 70, 90, 110, 130, 150, 200, 300];
+    const precipitationColorRange = ['#c7c7c7', '#9ffbfc', '#1ed0f8', '#15a5f6', '#0a79f6', '#30a031', '#28f74b', '#fefa50', '#fdcf44', '#fda337', '#fc2a1d', '#d62418', '#a71b12', '#a72b9d', '#d837cb', '#fb43f5', '#fdd4fb'];
+    const precipitationColor = d3.scaleThreshold()
+      .domain(precipitationColorDomain)
+      .range(precipitationColorRange);
+
+    const temperatureColorDomain = [-1.5, 11, 25, 40];
+    const temperatureColorRange = ['#0f7287', '#5ee48a', '#f3f3c2', '#750205'];
+    const temperatureColor = d3.scaleLinear()
+      .domain(temperatureColorDomain)
+      .range(temperatureColorRange)
+      .interpolate(d3.interpolateHcl);
+
     while (strDate < endDate){
       var strDate = dateMove.toISOString().slice(0,10);
       listDate.push(strDate);
@@ -90,24 +124,85 @@
       </div>`));
       i++;
     };
+    const dateHeight = 0.0 + $('.date').height();
+    var previousDate = undefined;
     $('#date-container').kinetic({
       slowdown: 0.99,
-      maxvelocity: 120
-    });
-    const dateHeight = 0.0 + $('.date').height();
-    document.addEventListener('scroll', function (event) {
-      if (event.target.id === 'date-container') { // apply any filtering condition        
-        $('h1').text(listDate[Math.floor(event.target.scrollTop/dateHeight)+6]);
+      maxvelocity: 120,
+      moved: (e) => {
+        if(previousDate != listDate[Math.floor(e.scrollTop/dateHeight)+6]) {
+          var entry = entries[listDate[Math.floor(e.scrollTop/dateHeight)+6]];
+          for (const [key, val] of Object.entries(entry.t)) {
+            // console.log(key)
+            d3.select('.t-'+key).attr('fill', temperatureColor(val));
+          }
+          for (const [key, val] of Object.entries(entry.p)) {
+            d3.select('.p-'+key).attr('fill', precipitationColor(val));
+          }
+        }
+        previousDate = listDate[Math.floor(e.scrollTop/dateHeight)+6];
       }
-    }, true /*Capture event*/);
+    });
     document.addEventListener('click', function (event) {
       $('#date-container').kinetic('end');
       $('#resume').show();
     }, true /*Capture event*/);
-    $('#date-container').kinetic('start', { velocityY: 3 });
+    
     $('#resume').on('click', function(event) {
       $('#date-container').kinetic('start', { velocityY: 3 });
       $('#resume').hide();
+    });
+
+    const mapRender = (target, topodata, type) => {
+      const margin = { top: 40, right: 40, bottom: 40, left: 40 },
+            height = 1000,
+            width = 850;
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+      const svg = d3.select(target)
+              .append("svg")
+              .call(d3.zoom().on("zoom", (e) => {
+                // Handle zooming and panning
+                graphContainer.attr('transform', `translate(${e.transform.x}, ${e.transform.y}) scale(${e.transform.k})`);
+              }))
+              .attr("width", width)
+              .attr("height", height);
+      const graphContainer = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+      
+      var randomPoints = [[120.997230, 24.786778], [121.428620, 25.103355]];
+      var features = topojson.feature(topodata, topodata.objects.COUNTY_MOI_1090820).features;
+      var prj = d3.geoMercator()
+        .center([122,23.9])
+        .scale(10000);
+      var myPath = d3.geoPath(prj);
+      graphContainer.selectAll("path").data(features).enter()
+        .append("path")
+          .attr("d", d => myPath(d))
+          .attr("class", d => `${type}-${d.properties.COUNTYID}`);
+      graphContainer.selectAll("point").data(randomPoints).enter()
+        .append("circle")
+          .attr("cx", d=>prj(d)[0])
+          .attr("cy", d=>prj(d)[1])
+          .attr('fill', 'red')
+          .attr('r', '10');
+    }
+
+    d3.json('topo.json').then(json => {
+      mapRender('#map-temp', json, 't');
+      mapRender('#map-rain', json, 'p');
+    });
+
+    d3.json('dataset.json').then(json => {
+      json.entries.forEach(e => {
+        entries[e.d] = {
+          c: e.c,
+          t: e.t,
+          p: e.p,
+        }
+      });
+      console.log(entries);
+      $('#date-container').kinetic('start', { velocityY: 3 });
     });
 
   });
