@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Map</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.min.css" integrity="sha512-oc9+XSs1H243/FRN9Rw62Fn8EtxjEYWHXRvjS43YtueEewbS6ObfXcJNyohjHqVKFPoXXUxwc+q1K7Dee6vv9g==" crossorigin="anonymous" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery.kinetic/jquery.kinetic.js"></script>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script type="text/javascript" src="https://unpkg.com/topojson@3"></script>
+  <style type="text/css">
+  </style>
+</head>
+<body>
+  
+</body>
+<script type="text/javascript">
+  jQuery(document).ready(function($) {
+    var countries = [];
+    var years = [];
+    const render = (data) => {
+      const margin = { top: 40, right: 40, bottom: 40, left: 40 },
+            height = 800,
+            width = 1800;
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+      const squareShift = 120;
+
+      const svg = d3.select('body')
+              .append("svg")
+              // .call(d3.zoom().on("zoom", (e) => {
+              //   // Handle zooming and panning
+              //   graphContainer.attr('transform', `translate(${e.transform.x}, ${e.transform.y}) scale(${e.transform.k})`);
+              // }))
+              .attr("width", width)
+              .attr("height", height);
+      const graphContainer = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      const squareContainer = graphContainer.append('g')
+        .attr('transform', `translate(${squareShift}, 0)`);
+      
+      const allWatt = data.map(elem => parseFloat(elem.TWh));
+      const maxWatt = d3.max(allWatt);
+      // const meanWatt = d3.max(allWatt);
+      const quantile50Watt = d3.quantile(allWatt, 0.5);
+      const quantile75Watt = d3.quantile(allWatt, 0.75);
+
+      const colorDomain = [0.05, quantile50Watt, quantile75Watt, maxWatt];
+      const colorRange = ['#ffffff', '#7fdcff', '#fde77a', '#fb3b50'];
+      const colorScale = d3.scaleLinear()
+              .domain(colorDomain)
+              .range(colorRange)
+              .interpolate(d3.interpolateHcl);
+      // const colorScale = d3.scaleSequentialLog(d3.interpolateBlues).domain([0.0, maxWatt]);
+
+      const countryScale = d3.scaleBand()
+              .round(true)
+              .paddingInner(0.1)
+              .domain(countries)
+              .range([0, innerHeight]);
+
+      const yearScale = d3.scaleBand()
+              .round(true)
+              .paddingInner(0.1)
+              .domain(years)
+              .range([0, innerWidth-squareShift]);
+
+      const countryContainer = graphContainer.append('g').attr('transform', 'translate(0,13)');;
+      countryContainer.selectAll('country').data(countries).enter()
+        .append('text')
+          .attr('x', 0)
+          .attr('y', d => countryScale(d))
+          .attr('fill', 'black')
+          .text(d => d);
+      
+      squareContainer.selectAll('square').data(data).enter()
+        .append('rect')
+          .attr('x', d => yearScale(d.Year))
+          .attr('y', d => countryScale(d.Country))
+          .attr('height', countryScale.bandwidth())
+          .attr('width', yearScale.bandwidth())
+          .attr('fill', d => colorScale(d.TWh));
+
+      const incidents = [
+        [1986, 'Chernobyl'],
+        [2011, 'Fukushima']
+      ];
+
+      squareContainer.selectAll('incident').data(incidents).enter()
+        .append('line')
+          .attr('x1', d => yearScale(d[0]))
+          .attr('x2', d => yearScale(d[0]))
+          .attr('y1', 0)
+          .attr('y2', innerHeight)
+          .attr('stroke', 'black');
+
+      squareContainer.selectAll('incident-label').data(incidents).enter()
+        .append('text')
+          .attr('x', d => yearScale(d[0]))
+          .attr('y', 0)
+          .attr('stroke', 'black')
+          .text(d => d);
+
+      squareContainer.selectAll('year').data(data).enter()
+        .append('text')
+          .attr('transform', d => `translate(${yearScale(d.Year)}, ${innerHeight}) rotate(45)`)
+          .attr('fill', 'black')
+          .text(d => d.Year);
+      
+    }
+
+    d3.csv('nuclear.csv').then(csv => {
+      csv.forEach(elem => {
+        if(!countries.includes(elem.Country)) {
+          countries.push(elem.Country);
+        }
+        if(!years.includes(elem.Year)) {
+          years.push(elem.Year);
+        }
+      });
+      render(csv);
+    });
+
+  });
+  
+          
+  
+</script>
+</html>
