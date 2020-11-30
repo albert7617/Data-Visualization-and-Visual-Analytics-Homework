@@ -100,6 +100,7 @@
                 .attr('dy', 36)
                 .attr('class', 'legend-text-2')
                 .attr('stroke', colorScale(wattHourLogScale(d.TWh)))
+                .attr('fill', colorScale(wattHourLogScale(d.TWh)))
                 .text(d.TWh + "TWh");
             var boxWidth = d3.max([d3.select('#energy .legend-text-1').node().getBoundingClientRect().width,
                                     d3.select('#energy .legend-text-2').node().getBoundingClientRect().width])+10;
@@ -249,6 +250,7 @@
                 .attr('dy', 36)
                 .attr('class', 'legend-text-2')
                 .attr('stroke', colorScale(d.Delta))
+                .attr('fill', colorScale(d.Delta))
                 .text((d.Delta<0?"":"+") + parseFloat(d.Delta) + "%");
             var boxWidth = d3.max([d3.select('#delta .legend-text-1').node().getBoundingClientRect().width,
                                     d3.select('#delta .legend-text-2').node().getBoundingClientRect().width])+10;
@@ -326,12 +328,10 @@
         .attr('y', -3)
         .text('Infinite (start from 0)');
       scaleContainer.append('text')
-        .attr('x', 585)
-        .attr('y', 14)
+        .attr('transform', 'translate(583, 6) rotate(90)')
         .text('~');
       scaleContainer.append('text')
-        .attr('x', 585)
-        .attr('y', 17)
+        .attr('transform', 'translate(586, 6) rotate(90)')
         .text('~');
     }
 
