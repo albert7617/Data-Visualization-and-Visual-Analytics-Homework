@@ -100,11 +100,12 @@
     var i = 0;
 
     const entries = {};
-    const precipitationColorDomain = [1, 2, 6, 10, 15, 20, 30, 40, 50, 70, 90, 110, 130, 150, 200, 300];
-    const precipitationColorRange = ['#c7c7c7', '#9ffbfc', '#1ed0f8', '#15a5f6', '#0a79f6', '#30a031', '#28f74b', '#fefa50', '#fdcf44', '#fda337', '#fc2a1d', '#d62418', '#a71b12', '#a72b9d', '#d837cb', '#fb43f5', '#fdd4fb'];
-    const precipitationColor = d3.scaleThreshold()
+    const precipitationColorDomain = [0, 0.1, 300];
+    const precipitationColorRange = ['#c8c8c8', '#6ed7ff', '#8c3bfb'];
+    const precipitationColor = d3.scaleLinear()
       .domain(precipitationColorDomain)
-      .range(precipitationColorRange);
+      .range(precipitationColorRange)
+      .interpolate(d3.interpolateHcl);
 
     const temperatureColorDomain = [-1.5, 11, 25, 40];
     const temperatureColorRange = ['#0f7287', '#5ee48a', '#f3f3c2', '#750205'];
@@ -112,6 +113,23 @@
       .domain(temperatureColorDomain)
       .range(temperatureColorRange)
       .interpolate(d3.interpolateHcl);
+
+    const radiusScale = {
+      '10': '6',
+      '9': '7',
+      '8': '8',
+      '7': '7',
+      '6': '6',
+      '5': '5',
+      '4': '5',
+      '3': '4',
+      '2': '3',
+      '1': '2',
+      '0': '1'
+    };
+    const projection = d3.geoMercator()
+      .center([122,23.9])
+      .scale(10000);
 
     while (strDate < endDate){
       var strDate = dateMove.toISOString().slice(0,10);
@@ -133,14 +151,33 @@
         if(previousDate != listDate[Math.floor(e.scrollTop/dateHeight)+6]) {
           var entry = entries[listDate[Math.floor(e.scrollTop/dateHeight)+6]];
           for (const [key, val] of Object.entries(entry.t)) {
-            // console.log(key)
             d3.select('.t-'+key).attr('fill', temperatureColor(val));
           }
           for (const [key, val] of Object.entries(entry.p)) {
             d3.select('.p-'+key).attr('fill', precipitationColor(val));
           }
+          if(entry.c != undefined) {
+            d3.select('#map-temp>svg>g').selectAll('data-point').data(entry.c).enter()
+              .append('circle')
+                .attr('cx', d => d[0])
+                .attr('cy', d => d[1])
+                .attr('fill', '#FF0000')
+                .attr('r', '5')
+                .attr('class', 'ttl-10');
+            d3.select('#map-rain>svg>g').selectAll('data-point').data(entry.c).enter()
+              .append('circle')
+                .attr('cx', d => d[0])
+                .attr('cy', d => d[1])
+                .attr('fill', '#FF0000')
+                .attr('r', '5')
+                .attr('class', 'ttl-10');
+          }
+          for (var i = 1; i < 11; i++) {
+            d3.select('.ttl-'+i).attr('opacity', i/10).attr('class', 'ttl-'+(i-1)).attr('r', radiusScale[i]);
+          }
+          d3.select('.ttl-0').remove();
+          previousDate = listDate[Math.floor(e.scrollTop/dateHeight)+6];
         }
-        previousDate = listDate[Math.floor(e.scrollTop/dateHeight)+6];
       }
     });
     document.addEventListener('click', function (event) {
@@ -170,7 +207,6 @@
       const graphContainer = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
       
-      var randomPoints = [[120.997230, 24.786778], [121.428620, 25.103355]];
       var features = topojson.feature(topodata, topodata.objects.COUNTY_MOI_1090820).features;
       var prj = d3.geoMercator()
         .center([122,23.9])
@@ -180,12 +216,6 @@
         .append("path")
           .attr("d", d => myPath(d))
           .attr("class", d => `${type}-${d.properties.COUNTYID}`);
-      graphContainer.selectAll("point").data(randomPoints).enter()
-        .append("circle")
-          .attr("cx", d=>prj(d)[0])
-          .attr("cy", d=>prj(d)[1])
-          .attr('fill', 'red')
-          .attr('r', '10');
     }
 
     d3.json('topo.json').then(json => {
@@ -196,13 +226,13 @@
     d3.json('dataset.json').then(json => {
       json.entries.forEach(e => {
         entries[e.d] = {
-          c: e.c,
+          c: e.c == undefined ? undefined : e.c.map(elem => projection(elem)),
           t: e.t,
           p: e.p,
         }
       });
       console.log(entries);
-      $('#date-container').kinetic('start', { velocityY: 3 });
+      $('#date-container').kinetic('start', { velocityY: 10 });
     });
 
   });
