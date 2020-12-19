@@ -8,6 +8,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/js/bootstrap.min.js"></script>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/topojson@3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.css" integrity="sha512-zlYhSecphd+kwRzeCOyj7/u3HZIQ3Q0NP7AN7ZEKhYTdi0AQOGGbc7eA3I/mUffqjdr8G1/9xoS478h+I0MQGg==" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
   <style type="text/css">
     .country-name {
       width: 145px;
@@ -29,17 +32,59 @@
     }
     .tile {
       width: 25px;
-      height: 20px;
+      height: 25px;
       margin-right: 3px;
     }
     #tooltip-delta-amount {
       font-weight: bolder;
     }
+    .fa-icon-container {
+      margin: 2px;
+    }
+    #energy {
+      width: max-content;
+    }
+    .rotate{
+      -moz-transition: all 0.5s linear;
+      -webkit-transition: all 0.5s linear;
+      transition: all 0.5s linear;
+    }
+    .rotate.down{
+      -moz-transform: rotate(180deg) translateY(4px);
+      -webkit-transform:rotate(180deg) translateY(4px);
+      transform:rotate(180deg) translateY(4px);
+    }
+    .fa-bars {
+      cursor: move;
+    }
+    .event {
+      position: relative;
+      height: 100%;
+      right: 375px;
+    }
+    .event-line {
+      height: 100%;
+      width: 2px;
+      background-color: black;
+    }
+    .event-desc {
+      position: absolute;
+      top: -20px;
+      width: max-content;
+    }
+    #container {
+      margin: 50px 0;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
-  <div id="energy"></div>
-  <div id="delta"></div>
+  <div id="container">
+    <div id="energy"></div>
+    <div id="events"></div>
+  </div>
   <div id="tooltip-combined" class="description" style="display: none;">
     <div class="d-flex flex-column">
       <div class="d-flex flex-row">
@@ -91,13 +136,20 @@
 
       const countryRow = container.selectAll('country-row').data(countries).enter()
         .append('div')
-          .attr('class', 'country-row d-flex flex-row');
+          .attr('class', 'country-row d-flex flex-row align-items-start');
 
       countryRow.append('div')
-        .attr('data-toggle', 'collapse')
-        .attr('data-target', d => '#'+d.replace(/\s+/g, '')+'-combined')
-        .attr('class', 'country-name d-flex flex-column')
+        .attr('class', 'combine-toggle fa-icon-container')
+        .html(d => `<i class="fas fa-bars"></i>`);
+
+      countryRow.append('div')
+        .attr('class', 'combine-toggle fa-icon-container')
+        .html(d => `<i class="fas fa-chevron-down rotate" data-target="#${d.replace(/\s+/g, '')}-combined"></i>`);
+
+      countryRow.append('div')
+        .attr('class', 'country-name')
         .html(d => d);
+
 
       const countryChartContainer = countryRow.append('div')
         .attr('data-country', d => d)
@@ -175,345 +227,23 @@
       $('.tile').mouseleave(event => {
         $('#tooltip-delta').hide();
       });
-      $('.country-name').on('click', e => {
-        console.log(e.target.dataset.target)
-        $(e.target.dataset.target).collapse();
+      $('.fas.fa-chevron-down.rotate').on('click', e => {
+        $(e.target.dataset.target).collapse('toggle');
+        $(e.target).toggleClass('down');
       });
-    }
+      dragula([document.querySelector('#energy')], {
+        moves: function (el, container, handle) {
+          return handle.classList.contains('fa-bars');
+        }
+      });
+      const events = [[100,'2011,Fukushima, Japan']];
 
-    const renderEnergy = (data) => {
-      const margin = { top: 40, right: 40, bottom: 140, left: 40 },
-            height = 900,
-            width = 1800;
-      const innerWidth = width - margin.left - margin.right;
-      const innerHeight = height - margin.top - margin.bottom;
-      const squareShift = 120;
-
-      const svg = d3.select('#energy')
-              .append("svg")
-              .attr("width", width)
-              .attr("height", height);
-      const graphContainer = svg.append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
-
-      const squareContainer = graphContainer.append('g')
-        .attr('transform', `translate(${squareShift}, 0)`);
-      
-      const wattHourLogScale = d3.scaleLog()
-              .domain([0.05, 1000])
-              .range([-1.5, 3]);
-
-      const colorDomain = [-1.5, 1, 2, 3];
-      const colorRange = ['#ffffff', '#7fdcff', '#fde77a', '#fb3b50'];
-      const colorScale = d3.scaleLinear()
-              .domain(colorDomain)
-              .range(colorRange)
-              .interpolate(d3.interpolateHcl);
-      // const colorScale = d3.scaleSequentialLog(d3.interpolateBlues).domain([0.0, maxWatt]);
-
-      const countryScale = d3.scaleBand()
-              .round(true)
-              .paddingInner(0.1)
-              .domain(countries)
-              .range([0, innerHeight]);
-
-      const yearScale = d3.scaleBand()
-              .round(true)
-              .paddingInner(0.1)
-              .domain(years)
-              .range([0, innerWidth-squareShift]); 
-
-      squareContainer.selectAll('country').data(countries).enter()
-        .append('text')
-          .attr('x', -squareShift)
-          .attr('y', d => countryScale(d))
-          .attr('dy', 11)
-          .attr('fill', 'black')
-          .text(d => d);
-      
-      squareContainer.selectAll('square').data(data).enter()
-        .append('rect')
-          .attr('x', d => yearScale(d.Year))
-          .attr('y', d => countryScale(d.Country))
-          .attr('height', countryScale.bandwidth())
-          .attr('width', yearScale.bandwidth())
-          .attr('fill', d => colorScale(wattHourLogScale(d.TWh)))
-          .on('mouseover', (e,d) => {
-            var legendContainer = graphContainer
-              .append('g')
-                .attr('class', 'legend')
-                .attr('transform', `translate(${yearScale(d.Year)-yearScale.bandwidth()*2+squareShift}, ${countryScale(d.Country)+countryScale.bandwidth()})`);
-            legendContainer
-              .append('rect')
-                .attr('width', '0')
-                .attr('height', '0')
-                .attr('fill', '#FFFFFF')
-                .attr('class', 'legend-box')
-                .attr('stroke', '#C8C8C8');
-            legendContainer
-              .append('text')
-                .attr('dx', 5)
-                .attr('dy', 20)
-                .attr('class', 'legend-text-1')
-                .text(d.Country + ',' + d.Year);
-            legendContainer
-              .append('text')
-                .attr('dx', 5)
-                .attr('dy', 36)
-                .attr('class', 'legend-text-2')
-                .attr('stroke', colorScale(wattHourLogScale(d.TWh)))
-                .attr('fill', colorScale(wattHourLogScale(d.TWh)))
-                .text(d.TWh + "TWh");
-            var boxWidth = d3.max([d3.select('#energy .legend-text-1').node().getBoundingClientRect().width,
-                                    d3.select('#energy .legend-text-2').node().getBoundingClientRect().width])+10;
-            var boxHeight = d3.select('#energy .legend-text-1').node().getBoundingClientRect().height+
-                              d3.select('#energy .legend-text-2').node().getBoundingClientRect().height;
-            d3.select('#energy .legend-box').attr('width', boxWidth).attr('height', boxHeight);
-
-          })
-          .on('mouseout', e => d3.select('#energy .legend').remove());
-
-      const incidents = [
-        [1986, 'Chernobyl'],
-        [1979, 'Three Mile Island'],
-        [1993, 'Ukraine'],
-        [1999, 'Ibaraki Prefecture, Japan'],
-        [2011, 'Fukushima, Japan']
-      ];
-
-      squareContainer.selectAll('incident').data(incidents).enter()
-        .append('line')
-          .attr('x1', d => yearScale(d[0]) + yearScale.bandwidth()/3)
-          .attr('x2', d => yearScale(d[0]) + yearScale.bandwidth()/3)
-          .attr('y1', 0)
-          .attr('y2', innerHeight)
-          .attr('stroke', 'black');
-
-      squareContainer.selectAll('incident-label').data(incidents).enter()
-        .append('text')
-          .attr('x', d => yearScale(d[0]))
-          .attr('y', 0)
-          .attr('stroke', 'black')
-          .text(d => d);
-
-      squareContainer.selectAll('year').data(data).enter()
-        .append('text')
-          .attr('transform', d => `translate(${yearScale(d.Year)}, ${innerHeight}) rotate(45)`)
-          .attr('fill', 'black')
-          .text(d => d.Year);
-
-      const scaleContainer = svg.append('g').attr('transform', 'translate(800, 860)');
-      const scaleSequence = d3.range(-1.5, 3, 0.01);
-      const scaleLabelSequence = d3.range(-1, 4);
-      const scaleSequenceX = d3.scaleLinear()
-              .domain([-1.5, 3])
-              .range([0,450]);
-      scaleContainer.selectAll('cell').data(scaleSequence).enter()
-        .append('rect')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('width', 1)
-          .attr('height', 20)
-          .attr('fill', d => colorScale(d));
-      scaleContainer.selectAll('label-line').data(scaleLabelSequence).enter()
-        .append('rect')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('width', 1)
-          .attr('height', 20)
-          .attr('fill', 'black');
-      scaleContainer.selectAll('label-text').data(scaleLabelSequence).enter()
-        .append('text')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('y', -3)
-          .attr('dx', -10)
-          .text(d => Math.pow(10, d));
-      scaleContainer.append('text')
-        .attr('x', -40)
-        .attr('y', 15)
-        .text('TWh');
-    }
-
-    const renderDelta = (data) => {
-      const margin = { top: 40, right: 40, bottom: 140, left: 40 },
-            height = 900,
-            width = 1800;
-      const innerWidth = width - margin.left - margin.right;
-      const innerHeight = height - margin.top - margin.bottom;
-      const squareShift = 120;
-
-      const svg = d3.select('#delta')
-              .append("svg")
-              .attr("width", width)
-              .attr("height", height);
-      const graphContainer = svg.append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
-
-      const squareContainer = graphContainer.append('g')
-        .attr('transform', `translate(${squareShift}, 0)`);
-      
-      const wattHourLogScale = d3.scaleLog()
-              .domain([0.05, 1000])
-              .range([-1.5, 3]);
-
-      const colorDomain = [-100, -0.1, 0, 0.1, 100, 1000];
-      const colorRange = ['#4eff19', '#c7ffb6', '#fff5c3', '#ffe291', '#ff001c', '#930010'];
-      const colorScale = d3.scaleLinear()
-              .domain(colorDomain)
-              .range(colorRange)
-              .interpolate(d3.interpolateHcl);
-
-      const countryScale = d3.scaleBand()
-              .round(true)
-              .paddingInner(0.1)
-              .domain(countries)
-              .range([0, innerHeight]);
-
-      const yearScale = d3.scaleBand()
-              .round(true)
-              .paddingInner(0.1)
-              .domain(years)
-              .range([0, innerWidth-squareShift]); 
-
-      squareContainer.selectAll('country').data(countries).enter()
-        .append('text')
-          .attr('x', -squareShift)
-          .attr('y', d => countryScale(d))
-          .attr('dy', 11)
-          .attr('fill', 'black')
-          .text(d => d);
-      
-      squareContainer.selectAll('square').data(data).enter()
-        .append('rect')
-          .attr('x', d => yearScale(d.Year))
-          .attr('y', d => countryScale(d.Country))
-          .attr('height', countryScale.bandwidth())
-          .attr('width', yearScale.bandwidth())
-          .attr('fill', d => colorScale(d.Delta))
-          .on('mouseover', (e,d) => {
-            var legendContainer = graphContainer
-              .append('g')
-                .attr('class', 'legend')
-                .attr('transform', `translate(${yearScale(d.Year)-yearScale.bandwidth()*2+squareShift}, ${countryScale(d.Country)+countryScale.bandwidth()})`);
-            legendContainer
-              .append('rect')
-                .attr('width', '150')
-                .attr('height', '100')
-                .attr('fill', '#FFFFFF')
-                .attr('class', 'legend-box')
-                .attr('stroke', '#C8C8C8');
-            legendContainer
-              .append('text')
-                .attr('dx', 5)
-                .attr('dy', 20)
-                .attr('class', 'legend-text-1')
-                .text(d.Country + ',' + d.Year);
-            legendContainer
-              .append('text')
-                .attr('dx', 5)
-                .attr('dy', 36)
-                .attr('class', 'legend-text-2')
-                .attr('stroke', colorScale(d.Delta))
-                .attr('fill', colorScale(d.Delta))
-                .text((d.Delta<0?"":"+") + parseFloat(d.Delta) + "%");
-            var boxWidth = d3.max([d3.select('#delta .legend-text-1').node().getBoundingClientRect().width,
-                                    d3.select('#delta .legend-text-2').node().getBoundingClientRect().width])+10;
-            var boxHeight = d3.select('#delta .legend-text-1').node().getBoundingClientRect().height+
-                              d3.select('#delta .legend-text-2').node().getBoundingClientRect().height;
-            d3.select('#delta .legend-box').attr('width', boxWidth).attr('height', boxHeight);
-
-          })
-          .on('mouseout', e => d3.select('#delta .legend').remove());
-
-      const incidents = [
-        [1986, 'Chernobyl'],
-        [1979, 'Three Mile Island'],
-        [1993, 'Ukraine'],
-        [1999, 'Ibaraki Prefecture, Japan'],
-        [2011, 'Fukushima, Japan']
-      ];
-
-      squareContainer.selectAll('incident').data(incidents).enter()
-        .append('line')
-          .attr('x1', d => yearScale(d[0]) + yearScale.bandwidth()/3)
-          .attr('x2', d => yearScale(d[0]) + yearScale.bandwidth()/3)
-          .attr('y1', 0)
-          .attr('y2', innerHeight)
-          .attr('stroke', 'black');
-
-      squareContainer.selectAll('incident-label').data(incidents).enter()
-        .append('text')
-          .attr('x', d => yearScale(d[0]))
-          .attr('y', 0)
-          .attr('stroke', 'black')
-          .text(d => d);
-
-      squareContainer.selectAll('year').data(data).enter()
-        .append('text')
-          .attr('transform', d => `translate(${yearScale(d.Year)}, ${innerHeight}) rotate(45)`)
-          .attr('fill', 'black')
-          .text(d => d.Year);
-
-      const scaleContainer = svg.append('g').attr('transform', 'translate(800, 860)');
-      const scaleSequence = d3.range(-100, 1000, 2);
-      const scaleLabelSequence = [-100, 0, 100, 500, 1000];
-      const scaleSequenceX = d3.scaleLinear()
-              .domain([-100, 1000])
-              .range([0,550]);
-      scaleContainer.selectAll('cell').data(scaleSequence).enter()
-        .append('rect')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('width', 1)
-          .attr('height', 20)
-          .attr('fill', d => colorScale(d));
-      scaleContainer.selectAll('label-line').data(scaleLabelSequence).enter()
-        .append('rect')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('width', 1)
-          .attr('height', 20)
-          .attr('fill', 'black');
-      scaleContainer.selectAll('label-text').data(scaleLabelSequence).enter()
-        .append('text')
-          .attr('x', d => scaleSequenceX(d))
-          .attr('y', -3)
-          .attr('dx', -10)
-          .text(d => (d<0?"":"+") + d + "%");
-      scaleContainer.append('text')
-        .attr('x', -70)
-        .attr('y', 15)
-        .text('Delta(%)');
-      scaleContainer.append('rect')
-        .attr('x', 620)
-        .attr('width', 30)
-        .attr('height', 20)
-        .attr('fill', 'black');
-      scaleContainer.append('text')
-        .attr('x', 620)
-        .attr('y', -3)
-        .text('Infinite (start from 0)');
-      scaleContainer.append('text')
-        .attr('transform', 'translate(583, 6) rotate(90)')
-        .text('~');
-      scaleContainer.append('text')
-        .attr('transform', 'translate(586, 6) rotate(90)')
-        .text('~');
-    }
-
-    // var loaded = 0;
-
-    // d3.csv('nuclear.csv').then(csv => {
-    //   csv.forEach(elem => {
-    //     if(!countries.includes(elem.Country)) {
-    //       countries.push(elem.Country);
-    //     }
-    //     if(!years.includes(elem.Year)) {
-    //       years.push(elem.Year);
-    //     }
-    //   });
-    //   loaded++;
-    //   if(loaded == 2) {
-    //     renderEnergyHTML(csv);
-    //   }
-    //   // renderEnergy(csv);
-    // });
+      const eventContainer = d3.select('#events').selectAll('event').data(events).enter()
+              .append('div')
+                .attr('class', 'event');
+      eventContainer.append('div').attr('class', 'event-line');
+      eventContainer.append('div').attr('class', 'event-desc').html(d => d[1]);
+    };
 
     Promise.all([
       d3.csv("nuclear_delta.csv"),
