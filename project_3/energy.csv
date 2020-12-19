@@ -1,4 +1,4 @@
-Country,Year,Nuclear,Solar,Wind,Hydroelectricity,Other,Oil,Coal,Gas
+Country,Year,核能,太陽能,風力,水力,其他,燃油,燃煤,燃氣
 加拿大,1965,0.1,0,0,118.1,0,0.0,0.0,0.0
 加拿大,1966,0.2,0,0,131.0,0,0.0,0.0,0.0
 加拿大,1967,0.2,0,0,133.9,0,0.0,0.0,0.0

@@ -145,7 +145,7 @@
               .interpolate(d3.interpolateHcl);
 
       const typeColorScale = d3.scaleOrdinal(d3.schemeTableau10)
-              .domain(['Nuclear', 'Solar', 'Wind', 'Hydroelectricity', 'Other', 'Oil', 'Coal', 'Gas']);
+              .domain(['核能', '太陽能', '風力', '水力', '其他', '燃油', '燃煤', '燃氣']);
 
       const container = d3.select('#energy');
 
@@ -312,14 +312,14 @@
           combined[elem.Country] = {};
         }
         combined[elem.Country][elem.Year] = {
-          Nuclear: parseFloat(elem.Nuclear),
-          Solar: parseFloat(elem.Solar),
-          Wind: parseFloat(elem.Wind),
-          Hydroelectricity: parseFloat(elem.Hydroelectricity),
-          Other: parseFloat(elem.Other),
-          Oil: parseFloat(elem.Oil),
-          Coal: parseFloat(elem.Coal),
-          Gas: parseFloat(elem.Gas),
+          核能: parseFloat(elem.核能),
+          太陽能: parseFloat(elem.太陽能),
+          風力: parseFloat(elem.風力),
+          水力: parseFloat(elem.水力),
+          其他: parseFloat(elem.其他),
+          燃油: parseFloat(elem.燃油),
+          燃煤: parseFloat(elem.燃煤),
+          燃氣: parseFloat(elem.燃氣),
         };
       });
       for(var country in combined) {
