@@ -60,7 +60,6 @@
     .event {
       position: relative;
       height: 100%;
-      right: 375px;
     }
     .event-line {
       height: 100%;
@@ -108,6 +107,22 @@
       </div>   
       <div class="d-flex flex-row">
         <span id="tooltip-delta-amount"></span>
+      </div>
+    </div>
+  </div>
+  <div id="tooltip-event" class="description" style="display: none;">
+    <div class="d-flex flex-column">
+      <div class="d-flex flex-row align-items-center">
+        <i class="fas fa-radiation"></i>
+        <span id="tooltip-event-year"></span>
+        <span>,&nbsp</span>
+        <span id="tooltip-event-month"></span>
+      </div>   
+      <div class="d-flex flex-row">
+        <span id="tooltip-event-desc"></span>
+      </div>
+      <div class="d-flex flex-row">
+        <span id="tooltip-event-location"></span>
       </div>
     </div>
   </div>
@@ -183,20 +198,26 @@
             .each((year, idx, elems) => {
               if(combined[country][year]) {
                 var prev = 0;
-                var svg = d3.select(elems[idx]);
+                var svg = d3.select(elems[idx])
+                  .append('g')
+                    .attr('transform', 'scale(1,-1) translate(0, -200)');
                 for(var type in combined[country][year]) {
+                  if(type == 'Total') {
+                    continue;
+                  }
+                  var current = combined[country][year][type]/combined[country]['GrandProduction']*100;
                   svg.append('rect')
                     .attr('data-type', type)
-                    .attr('data-proportion', `${(combined[country][year][type]*100).toFixed(2)}%`)
+                    .attr('data-proportion', `${(combined[country][year][type]/combined[country][year]['Total']*100).toFixed(2)}%`)
                     .attr('data-year', year)
                     .attr('data-country', country)
                     .attr('class', 'sub-bar')
                     .attr('x', '0')
                     .attr('y', `${prev}%`)
                     .attr('width', '100%')
-                    .attr('height', `${combined[country][year][type]*100}%`)
+                    .attr('height', `${current}%`)
                     .attr('fill', typeColorScale(type));
-                  prev += combined[country][year][type]*100;
+                  prev += current;
                 }
               }
             });
@@ -231,23 +252,46 @@
         $(e.target.dataset.target).collapse('toggle');
         $(e.target).toggleClass('down');
       });
+
       dragula([document.querySelector('#energy')], {
         moves: function (el, container, handle) {
           return handle.classList.contains('fa-bars');
         }
       });
-      const events = [[100,'2011,Fukushima, Japan']];
+
+      const events = [{
+        year: 2011,
+        month: 3,
+        desc: 'Fukushima, Japan'
+      }];
 
       const eventContainer = d3.select('#events').selectAll('event').data(events).enter()
               .append('div')
+                .style('right', d => (2019-d.year+(12-d.month)/12)*25+'px')
                 .attr('class', 'event');
-      eventContainer.append('div').attr('class', 'event-line');
-      eventContainer.append('div').attr('class', 'event-desc').html(d => d[1]);
+      eventContainer.append('div')
+        .attr('data-year', d => d.year)
+        .attr('data-month', d => d.month)
+        .attr('data-desc', d => d.desc)
+        .attr('class', 'event-line');
+      eventContainer.append('div').attr('class', 'event-desc').html(d => d.year+', '+d.desc);
+
+      $('.event-line').mousemove(event => {
+        var left = event.pageX - $('body').offset().left + 10;
+        var top = event.pageY - $('body').offset().top + 10;
+        $('#tooltip-event-year').html(event.target.dataset.year);
+        $('#tooltip-event-month').html(event.target.dataset.month);
+        $('#tooltip-event-desc').html(event.target.dataset.desc);
+        $('#tooltip-event').css({top: top,left: left}).show();
+      });
+      $('.event-line').mouseleave(event => {
+        $('#tooltip-event').hide();
+      });
     };
 
     Promise.all([
       d3.csv("nuclear_delta.csv"),
-      d3.csv("combined.csv"),
+      d3.csv("energy.csv"),
     ]).then(function(files) {
       var nuclearDelta = {};
       var combined = {};
@@ -277,15 +321,23 @@
           Coal: parseFloat(elem.Coal),
           Gas: parseFloat(elem.Gas),
         };
-      })
+      });
+      for(var country in combined) {
+        var maxProduction = 0;
+        for(var year in combined[country]) {
+          var currentProduction = 0;
+          for(var type in combined[country][year]) {
+            currentProduction += combined[country][year][type];
+          }
+          combined[country][year]['Total'] = currentProduction;
+          maxProduction = maxProduction < currentProduction ? currentProduction : maxProduction;
+        }
+        combined[country]['GrandProduction'] = maxProduction;
+      }
       renderEnergyHTML(nuclearDelta, combined);
 
     }).catch(function(err) {
         // handle error here
-    })
-
-    d3.csv('nuclear_delta.csv').then(csv => {
-      // renderDelta(csv);
     });
 
   });
