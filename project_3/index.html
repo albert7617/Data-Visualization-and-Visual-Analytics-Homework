@@ -54,11 +54,17 @@
       -webkit-transform:rotate(180deg) translateY(4px);
       transform:rotate(180deg) translateY(4px);
     }
+    .fa-chevron-down {
+      cursor: pointer;
+    }
     .fa-bars {
       cursor: move;
     }
-    .event {
+    #events {
       position: relative;
+    }
+    .event {
+      position: absolute;
       height: 100%;
     }
     .event-line {
@@ -72,10 +78,12 @@
       width: max-content;
     }
     #container {
+      width: 100%;
       margin: 50px 0;
       display: flex;
       flex-direction: row;
       justify-content: center;
+      position: relative;
     }
   </style>
 </head>
@@ -262,12 +270,16 @@
       const events = [{
         year: 2011,
         month: 3,
-        desc: 'Fukushima, Japan'
-      }];
+        desc: '日本福島核災'
+      },{
+        year: 1986,
+        month: 4,
+        desc: '車諾比核事故'
+      },];
 
       const eventContainer = d3.select('#events').selectAll('event').data(events).enter()
               .append('div')
-                .style('right', d => (2019-d.year+(12-d.month)/12)*25+'px')
+                .style('right', d => 25*(12-d.month)/12+(2019-d.year)*28+'px')
                 .attr('class', 'event');
       eventContainer.append('div')
         .attr('data-year', d => d.year)
