@@ -252,14 +252,16 @@
         $('#tooltip-combined').hide();
       });
       $('.tile').mousemove(event => {
-        var left = event.pageX - $('body').offset().left + 10;
-        var top = event.pageY - $('body').offset().top + 10;
-        var sign = parseFloat(event.target.dataset.delta) < 0 ? "" : "+";
-        $('#tooltip-delta-year').html(event.target.dataset.year);
-        $('#tooltip-delta-country').html(event.target.dataset.country);
-        $('#tooltip-delta-amount').html(sign+event.target.dataset.delta+"%");
-        $('#tooltip-delta-amount').css({color: event.target.dataset.color});
-        $('#tooltip-delta').css({top: top,left: left}).show();
+        if(event.target.dataset.delta != undefined) {
+          var left = event.pageX - $('body').offset().left + 10;
+          var top = event.pageY - $('body').offset().top + 10;
+          var sign = parseFloat(event.target.dataset.delta) < 0 ? "" : "+";
+          $('#tooltip-delta-year').html(event.target.dataset.year);
+          $('#tooltip-delta-country').html(event.target.dataset.country);
+          $('#tooltip-delta-amount').html(sign+event.target.dataset.delta+"%");
+          $('#tooltip-delta-amount').css({color: event.target.dataset.color});
+          $('#tooltip-delta').css({top: top,left: left}).show();
+        }
       });
       $('.tile').mouseleave(event => {
         $('#tooltip-delta').hide();

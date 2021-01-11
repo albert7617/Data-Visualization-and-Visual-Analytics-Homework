@@ -28,7 +28,7 @@ with open('nuclear_raw.csv', newline='', encoding='utf8') as c:
           csvWriter2.writerow([country, int(head)+1, '%.3f' % (100*(floatCol-previous)/previous)])
         previous = floatCol
       if previous != 0 and (col == 'n/a' or col == '-'):
-        csvWriter2.writerow([country, int(head)+1, '100'])
+        csvWriter2.writerow([country, int(head)+1, '-100'])
         previous = 0
 cw1.close()
 cw2.close()
